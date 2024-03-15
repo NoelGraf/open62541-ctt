@@ -28,15 +28,19 @@
  * corresponding CTT configuration is available at
  * https://github.com/open62541/open62541-ctt */
 
+/* Global variables also used by the discovery client */
+static UA_ByteString certificate;
+#ifdef UA_ENABLE_ENCRYPTION
+static UA_ByteString privateKey;
+#endif
+
 static const size_t usernamePasswordsSize = 2;
 static UA_UsernamePasswordLogin usernamePasswords[2] = {
-    {UA_STRING_STATIC("user1"), UA_STRING_STATIC("password")},
-    {UA_STRING_STATIC("user2"), UA_STRING_STATIC("password1")}};
+        {UA_STRING_STATIC("user1"), UA_STRING_STATIC("password")},
+        {UA_STRING_STATIC("user2"), UA_STRING_STATIC("password1")}};
 
 static const UA_NodeId baseDataVariableType = {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_BASEDATAVARIABLETYPE}};
 static const UA_NodeId accessDenied = {1, UA_NODEIDTYPE_NUMERIC, {1337}};
-static UA_Client *ldsClientRegister;
-static UA_UInt64 ldsCallbackId;
 
 /* Custom AccessControl policy that disallows access to one specific node */
 static UA_Byte
@@ -72,10 +76,10 @@ readTimeData(UA_Server *server,
 
 static UA_StatusCode
 readRandomBoolData(UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                   const UA_NodeId *sessionId, void *sessionContext,
+                   const UA_NodeId *nodeId, void *nodeContext,
+                   UA_Boolean sourceTimeStamp,
+                   const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -93,10 +97,10 @@ readRandomBoolData(UA_Server *server,
 
 static UA_StatusCode
 readRandomInt16Data(UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                    const UA_NodeId *sessionId, void *sessionContext,
+                    const UA_NodeId *nodeId, void *nodeContext,
+                    UA_Boolean sourceTimeStamp,
+                    const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -114,10 +118,10 @@ readRandomInt16Data(UA_Server *server,
 
 static UA_StatusCode
 readRandomInt32Data(UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                    const UA_NodeId *sessionId, void *sessionContext,
+                    const UA_NodeId *nodeId, void *nodeContext,
+                    UA_Boolean sourceTimeStamp,
+                    const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -135,18 +139,18 @@ readRandomInt32Data(UA_Server *server,
 
 static UA_StatusCode
 readRandomInt64Data(UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                    const UA_NodeId *sessionId, void *sessionContext,
+                    const UA_NodeId *nodeId, void *nodeContext,
+                    UA_Boolean sourceTimeStamp,
+                    const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
-    value->hasStatus = true;
-    value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
-    return UA_STATUSCODE_GOOD;
+        value->hasStatus = true;
+        value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
+        return UA_STATUSCODE_GOOD;
     }
-        UA_Int64 toggle = (UA_Int64)UA_UInt32_random();
-        UA_Variant_setScalarCopy(&value->value, &toggle, &UA_TYPES[UA_TYPES_INT64]);
-        value->hasValue = true;
+    UA_Int64 toggle = (UA_Int64)UA_UInt32_random();
+    UA_Variant_setScalarCopy(&value->value, &toggle, &UA_TYPES[UA_TYPES_INT64]);
+    value->hasValue = true;
     if(sourceTimeStamp) {
         value->hasSourceTimestamp = true;
         value->sourceTimestamp = UA_DateTime_now();
@@ -156,10 +160,10 @@ readRandomInt64Data(UA_Server *server,
 
 static UA_StatusCode
 readRandomUInt16Data(UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                     const UA_NodeId *sessionId, void *sessionContext,
+                     const UA_NodeId *nodeId, void *nodeContext,
+                     UA_Boolean sourceTimeStamp,
+                     const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -177,10 +181,10 @@ readRandomUInt16Data(UA_Server *server,
 
 static UA_StatusCode
 readRandomUInt32Data(UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                     const UA_NodeId *sessionId, void *sessionContext,
+                     const UA_NodeId *nodeId, void *nodeContext,
+                     UA_Boolean sourceTimeStamp,
+                     const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -198,10 +202,10 @@ readRandomUInt32Data(UA_Server *server,
 
 static UA_StatusCode
 readRandomUInt64Data(UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                     const UA_NodeId *sessionId, void *sessionContext,
+                     const UA_NodeId *nodeId, void *nodeContext,
+                     UA_Boolean sourceTimeStamp,
+                     const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -219,10 +223,10 @@ readRandomUInt64Data(UA_Server *server,
 
 static UA_StatusCode
 readRandomStringData (UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                      const UA_NodeId *sessionId, void *sessionContext,
+                      const UA_NodeId *nodeId, void *nodeContext,
+                      UA_Boolean sourceTimeStamp,
+                      const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -237,15 +241,15 @@ readRandomStringData (UA_Server *server,
         value->hasSourceTimestamp = true;
         value->sourceTimestamp = UA_DateTime_now();
     }
-   return UA_STATUSCODE_GOOD;
+    return UA_STATUSCODE_GOOD;
 }
 
 static UA_StatusCode
 readRandomFloatData (UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                     const UA_NodeId *sessionId, void *sessionContext,
+                     const UA_NodeId *nodeId, void *nodeContext,
+                     UA_Boolean sourceTimeStamp,
+                     const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -258,15 +262,15 @@ readRandomFloatData (UA_Server *server,
         value->hasSourceTimestamp = true;
         value->sourceTimestamp = UA_DateTime_now();
     }
-   return UA_STATUSCODE_GOOD;
+    return UA_STATUSCODE_GOOD;
 }
 
 static UA_StatusCode
 readRandomDoubleData (UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                      const UA_NodeId *sessionId, void *sessionContext,
+                      const UA_NodeId *nodeId, void *nodeContext,
+                      UA_Boolean sourceTimeStamp,
+                      const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -279,14 +283,14 @@ readRandomDoubleData (UA_Server *server,
         value->hasSourceTimestamp = true;
         value->sourceTimestamp = UA_DateTime_now();
     }
-   return UA_STATUSCODE_GOOD;
+    return UA_STATUSCODE_GOOD;
 }
 static UA_StatusCode
 readByteString (UA_Server *server,
-             const UA_NodeId *sessionId, void *sessionContext,
-             const UA_NodeId *nodeId, void *nodeContext,
-             UA_Boolean sourceTimeStamp,
-             const UA_NumericRange *range, UA_DataValue *value) {
+                const UA_NodeId *sessionId, void *sessionContext,
+                const UA_NodeId *nodeId, void *nodeContext,
+                UA_Boolean sourceTimeStamp,
+                const UA_NumericRange *range, UA_DataValue *value) {
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -301,7 +305,7 @@ readByteString (UA_Server *server,
         value->hasSourceTimestamp = true;
         value->sourceTimestamp = UA_DateTime_now();
     }
-   return UA_STATUSCODE_GOOD;
+    return UA_STATUSCODE_GOOD;
 }
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -366,6 +370,22 @@ outargMethod(UA_Server *server,
 
 static void
 setInformationModel(UA_Server *server) {
+    /* Workaround for compatibility between the CTT 1.04. information model
+     * check and the 1.05. nodeset, which is loaded in our default configuration.
+     * With 1.05. the fields "ConditionSubClassId" and "ConditionSubClassName"
+     * are now optional children of the "BaseEventType". Therefore, the fields are
+     * not referenced in the "ConditionType" since this type inherit the fields
+     * from the "BaseEventType". For compatibility, the references are created
+     * manually */
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE),
+                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE_CONDITIONSUBCLASSID),
+                           true);
+    UA_Server_addReference(server, UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE),
+                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                           UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE_CONDITIONSUBCLASSNAME),
+                           true);
+
     /* add a custom reference type */
     UA_ReferenceTypeAttributes myRef = UA_ReferenceTypeAttributes_default;
     myRef.description = UA_LOCALIZEDTEXT("", "my organize");
@@ -539,7 +559,7 @@ setInformationModel(UA_Server *server) {
     UA_UInt32 matrixDims[2] = {5, 5};
     UA_UInt32 id = 51000; // running id in namespace 0
     for(UA_UInt32 type = 0; type < UA_TYPES_DIAGNOSTICINFO; type++) {
-        if(type == UA_TYPES_VARIANT || type == UA_TYPES_DIAGNOSTICINFO)
+        if(type == UA_TYPES_VARIANT || type == UA_TYPES_DIAGNOSTICINFO || type == UA_TYPES_EXTENSIONOBJECT || type == UA_TYPES_DATAVALUE)
             continue;
 
         UA_VariableAttributes attr = UA_VariableAttributes_default;
@@ -648,7 +668,7 @@ setInformationModel(UA_Server *server) {
     UA_UInt32 scale_nodeid = 43000;
     for(UA_UInt32 type = 0; type < 15; type++) {
         if(type == UA_TYPES_SBYTE || type == UA_TYPES_BYTE
-                || type == UA_TYPES_GUID)
+           || type == UA_TYPES_GUID)
             continue;
 
         UA_DataSource scaleTestDataSource;
@@ -721,9 +741,9 @@ setInformationModel(UA_Server *server) {
             attr.displayName = UA_LOCALIZEDTEXT("en-US", name);
             UA_QualifiedName qualifiedName = UA_QUALIFIEDNAME(1, name);
             UA_Server_addDataSourceVariableNode(server, UA_NODEID_NUMERIC(1, ++scale_nodeid),
-                                      UA_NODEID_NUMERIC(1, SCALETESTID),
-                                      UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),qualifiedName,
-                                      baseDataVariableType, attr, scaleTestDataSource, NULL, NULL);
+                                                UA_NODEID_NUMERIC(1, SCALETESTID),
+                                                UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),qualifiedName,
+                                                baseDataVariableType, attr, scaleTestDataSource, NULL, NULL);
             scale_i++;
         }
         UA_Variant_clear(&attr.value);
@@ -853,22 +873,61 @@ setInformationModel(UA_Server *server) {
 #endif
 }
 
-#ifdef UA_ENABLE_DISCOVERY
-static void configureLdsRegistration(UA_Server *server){
-    ldsClientRegister = UA_Client_new();
-    UA_ClientConfig_setDefault(UA_Client_getConfig(ldsClientRegister));
+static UA_Boolean hasRegistered = false;
 
-    // periodic server register after 1 Minutes, delay first register for 500ms
-    UA_StatusCode retval =
-        UA_Server_addPeriodicServerRegisterCallback(server, ldsClientRegister, "opc.tcp://localhost:4840",
-                                                    60 * 1000, 500, &ldsCallbackId);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
-                     "Could not create periodic job for server register. StatusCode %s",
-                     UA_StatusCode_name(retval));
-        UA_Client_disconnect(ldsClientRegister);
-        UA_Client_delete(ldsClientRegister);
+static void
+notifyState(UA_Server *server, UA_LifecycleState state) {
+#ifdef UA_ENABLE_DISCOVERY
+    if(state == UA_LIFECYCLESTATE_STARTED && !hasRegistered) {
+        UA_ClientConfig cc;
+        memset(&cc, 0, sizeof(UA_ClientConfig));
+        UA_ClientConfig_setDefault(&cc);
+#ifdef UA_ENABLE_ENCRYPTION
+        UA_ClientConfig_setDefaultEncryption(&cc, certificate, privateKey, NULL, 0, NULL, 0);
+        UA_String_clear(&cc.clientDescription.applicationUri);
+        UA_ServerConfig *sc = UA_Server_getConfig(server);
+        UA_String_copy(&sc->applicationDescription.applicationUri,
+                       &cc.clientDescription.applicationUri);
+#endif
+        UA_Server_registerDiscovery(server, &cc,
+                                    UA_STRING("opc.tcp://localhost:4840"),
+                                    UA_STRING_NULL);
+        hasRegistered = true;
     }
+    if(state != UA_LIFECYCLESTATE_STARTED && hasRegistered) {
+        UA_ClientConfig cc;
+        memset(&cc, 0, sizeof(UA_ClientConfig));
+        UA_ClientConfig_setDefault(&cc);
+#ifdef UA_ENABLE_ENCRYPTION
+        UA_ClientConfig_setDefaultEncryption(&cc, certificate, privateKey, NULL, 0, NULL, 0);
+        UA_String_clear(&cc.clientDescription.applicationUri);
+        UA_ServerConfig *sc = UA_Server_getConfig(server);
+        UA_String_copy(&sc->applicationDescription.applicationUri,
+                       &cc.clientDescription.applicationUri);
+#endif
+        UA_Server_deregisterDiscovery(server, &cc,
+                                      UA_STRING("opc.tcp://localhost:4840"));
+        hasRegistered = false;
+    }
+#endif
+}
+
+#ifdef UA_ENABLE_DISCOVERY
+static void
+discoveryRegisterCallback(UA_Server *server, void *data) {
+    UA_ClientConfig cc;
+    memset(&cc, 0, sizeof(UA_ClientConfig));
+    UA_ClientConfig_setDefault(&cc);
+#ifdef UA_ENABLE_ENCRYPTION
+    UA_ClientConfig_setDefaultEncryption(&cc, certificate, privateKey, NULL, 0, NULL, 0);
+    UA_String_clear(&cc.clientDescription.applicationUri);
+    UA_ServerConfig *sc = UA_Server_getConfig(server);
+    UA_String_copy(&sc->applicationDescription.applicationUri,
+                   &cc.clientDescription.applicationUri);
+#endif
+    UA_Server_registerDiscovery(server, &cc,
+                                UA_STRING("opc.tcp://localhost:4840"),
+                                UA_STRING_NULL);
 }
 #endif
 
@@ -876,56 +935,42 @@ static void configureLdsRegistration(UA_Server *server){
 static void
 enableNoneSecurityPolicy(UA_ServerConfig *config) {
     UA_StatusCode retval = UA_ServerConfig_addEndpoint(config, UA_SECURITY_POLICY_NONE_URI,
-                                         UA_MESSAGESECURITYMODE_NONE);
+                                                       UA_MESSAGESECURITYMODE_NONE);
     if(retval != UA_STATUSCODE_GOOD) {
-        UA_LOG_WARNING(&config->logger, UA_LOGCATEGORY_USERLAND,
+        UA_LOG_WARNING(config->logging, UA_LOGCATEGORY_USERLAND,
                        "Failed to add SecurityPolicy#None to the endpoint list.");
     }
     config->securityPolicyNoneDiscoveryOnly = false;
 }
 
 static void
-enableBasic128SecurityPolicy(UA_ServerConfig *config,
-                             const UA_ByteString *certificate,
-                             const UA_ByteString *privateKey) {
-    /* Populate the SecurityPolicies */
-    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
-    UA_ByteString localPrivateKey  = UA_BYTESTRING_NULL;
-    if(certificate)
-        localCertificate = *certificate;
-    if(privateKey)
-        localPrivateKey = *privateKey;
-
-    UA_StatusCode retval = UA_ServerConfig_addSecurityPolicyBasic128Rsa15(config, &localCertificate, &localPrivateKey);
+enableBasic128SecurityPolicy(UA_ServerConfig *config) {
+    UA_StatusCode retval = UA_ServerConfig_addSecurityPolicyBasic128Rsa15(config, &certificate, &privateKey);
     if(retval != UA_STATUSCODE_GOOD) {
-        UA_LOG_WARNING(&config->logger, UA_LOGCATEGORY_USERLAND,
+        UA_LOG_WARNING(config->logging, UA_LOGCATEGORY_USERLAND,
                        "Could not add SecurityPolicy#Basic128Rsa15 with error code %s",
                        UA_StatusCode_name(retval));
+        return;
     }
-    UA_ServerConfig_addEndpoint(config, config->securityPolicies[config->securityPoliciesSize-1].policyUri, UA_MESSAGESECURITYMODE_SIGN);
-    UA_ServerConfig_addEndpoint(config, config->securityPolicies[config->securityPoliciesSize-1].policyUri, UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
+    UA_ServerConfig_addEndpoint(config, config->securityPolicies[config->securityPoliciesSize-1].policyUri,
+                                UA_MESSAGESECURITYMODE_SIGN);
+    UA_ServerConfig_addEndpoint(config, config->securityPolicies[config->securityPoliciesSize-1].policyUri,
+                                UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
 }
 
 static void
-enableBasic256SecurityPolicy(UA_ServerConfig *config,
-                             const UA_ByteString *certificate,
-                             const UA_ByteString *privateKey) {
-    /* Populate the SecurityPolicies */
-    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
-    UA_ByteString localPrivateKey  = UA_BYTESTRING_NULL;
-    if(certificate)
-        localCertificate = *certificate;
-    if(privateKey)
-        localPrivateKey = *privateKey;
-
-    UA_StatusCode retval = UA_ServerConfig_addSecurityPolicyBasic256(config, &localCertificate, &localPrivateKey);
+enableBasic256SecurityPolicy(UA_ServerConfig *config) {
+    UA_StatusCode retval = UA_ServerConfig_addSecurityPolicyBasic256(config, &certificate, &privateKey);
     if(retval != UA_STATUSCODE_GOOD) {
-        UA_LOG_WARNING(&config->logger, UA_LOGCATEGORY_USERLAND,
+        UA_LOG_WARNING(config->logging, UA_LOGCATEGORY_USERLAND,
                        "Could not add SecurityPolicy#Basic256 with error code %s",
                        UA_StatusCode_name(retval));
+        return;
     }
-    UA_ServerConfig_addEndpoint(config, config->securityPolicies[config->securityPoliciesSize-1].policyUri, UA_MESSAGESECURITYMODE_SIGN);
-    UA_ServerConfig_addEndpoint(config, config->securityPolicies[config->securityPoliciesSize-1].policyUri, UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
+    UA_ServerConfig_addEndpoint(config, config->securityPolicies[config->securityPoliciesSize-1].policyUri,
+                                UA_MESSAGESECURITYMODE_SIGN);
+    UA_ServerConfig_addEndpoint(config, config->securityPolicies[config->securityPoliciesSize-1].policyUri,
+                                UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
 }
 
 
@@ -998,38 +1043,76 @@ disableAes256Sha256RsaPssSecurityPolicy(UA_ServerConfig *config) {
     }
 }
 
+static void
+disableX509Auth(UA_ServerConfig *config) {
+    UA_AccessControl *ac = &config->accessControl;
+    for(size_t i = 0; i < ac->userTokenPoliciesSize; i++) {
+        UA_UserTokenPolicy *utp = &ac->userTokenPolicies[i];
+        if(utp->tokenType != UA_USERTOKENTYPE_CERTIFICATE)
+            continue;
+
+        UA_UserTokenPolicy_clear(utp);
+        /* Move the last to this position */
+        if(i + 1 < ac->userTokenPoliciesSize) {
+            ac->userTokenPolicies[i] = ac->userTokenPolicies[ac->userTokenPoliciesSize-1];
+            i--;
+        }
+        ac->userTokenPoliciesSize--;
+    }
+}
+
+static void
+disableUsernamePasswordAuth(UA_ServerConfig *config) {
+    UA_AccessControl *ac = &config->accessControl;
+    for(size_t i = 0; i < ac->userTokenPoliciesSize; i++) {
+        UA_UserTokenPolicy *utp = &ac->userTokenPolicies[i];
+        if(utp->tokenType != UA_USERTOKENTYPE_USERNAME)
+            continue;
+
+        UA_UserTokenPolicy_clear(utp);
+        /* Move the last to this position */
+        if(i + 1 < ac->userTokenPoliciesSize) {
+            ac->userTokenPolicies[i] = ac->userTokenPolicies[ac->userTokenPoliciesSize-1];
+            i--;
+        }
+        ac->userTokenPoliciesSize--;
+    }
+}
+
 #endif
 
 static void
 usage(void) {
     UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
                    "Usage:\n"
-#ifndef UA_ENABLE_ENCRYPTION
+                   #ifndef UA_ENABLE_ENCRYPTION
                    "server_ctt [<server-certificate.der>]\n"
-#else
+                   #else
                    "server_ctt <server-certificate.der> <private-key.der>\n"
-#ifndef __linux__
+                   #ifndef __linux__
                    "\t[--secureChannelTrustList <tl1.ctl> <tl2.ctl> ... ]\n"
                    "\t[--secureChannelIssuerList <il1.der> <il2.der> ... ]\n"
                    "\t[--secureChannelRevocationList <rv1.crl> <rv2.crl> ...]\n"
                    "\t[--sessionTrustList <tl1.ctl> <tl2.ctl> ... ]\n"
                    "\t[--sessionIssuerList <il1.der> <il2.der> ... ]\n"
                    "\t[--sessionRevocationList <rv1.crl> <rv2.crl> ...]\n"
-#else
+                   #else
                    "\t[--secureChannelTrustListFolder <folder>]\n"
                    "\t[--secureChannelIssuerListFolder <folder>]\n"
                    "\t[--secureChannelRevocationListFolder <folder>]\n"
                    "\t[--sessionTrustListFolder <folder>]\n"
                    "\t[--sessionIssuerListFolder <folder>]\n"
                    "\t[--sessionRevocationListFolder <folder>]\n"
-#endif
+                   #endif
                    "\t[--enableNone]\n"
                    "\t[--enableBasic128]\n"
                    "\t[--enableBasic256]\n"
                    "\t[--disableBasic256Sha256]\n"
                    "\t[--disableAes128Sha256RsaOaep]\n"
                    "\t[--disableAes256Sha256RsaPss]\n"
-#endif
+                   "\t[--disableX509]\n"
+                   "\t[--disableUsernamePassword]\n"
+                   #endif
                    "\t[--enableTimestampCheck]\n"
                    "\t[--enableAnonymous]\n");
 }
@@ -1046,12 +1129,11 @@ int main(int argc, char **argv) {
 
     /* Load certificate */
     size_t pos = 1;
-    UA_ByteString certificate = UA_BYTESTRING_NULL;
     if((size_t)argc >= pos + 1) {
         certificate = loadFile(argv[1]);
         if(certificate.length == 0) {
             UA_LOG_FATAL(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                           "Unable to load file %s.", argv[pos]);
+                         "Unable to load file %s.", argv[pos]);
             return EXIT_FAILURE;
         }
         pos++;
@@ -1059,12 +1141,11 @@ int main(int argc, char **argv) {
 
 #ifdef UA_ENABLE_ENCRYPTION
     /* Load the private key */
-    UA_ByteString privateKey = UA_BYTESTRING_NULL;
     if((size_t)argc >= pos + 1) {
         privateKey = loadFile(argv[2]);
         if(privateKey.length == 0) {
             UA_LOG_FATAL(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                           "Unable to load file %s.", argv[pos]);
+                         "Unable to load file %s.", argv[pos]);
             return EXIT_FAILURE;
         }
         pos++;
@@ -1077,6 +1158,8 @@ int main(int argc, char **argv) {
     UA_Boolean disableBasic256Sha256 = false;
     UA_Boolean disableAes128Sha256RsaOaep = false;
     UA_Boolean disableAes256Sha256RsaPss = false;
+    UA_Boolean disableX509 = false;
+    UA_Boolean disableUsernamePassword = false;
 
 #ifndef __linux__
     UA_ByteString scTrustList[100];
@@ -1146,6 +1229,16 @@ int main(int argc, char **argv) {
 
         if(strcmp(argv[pos], "--disableAes256Sha256RsaPss") == 0) {
             disableAes256Sha256RsaPss = true;
+            continue;
+        }
+
+        if(strcmp(argv[pos], "--disableX509") == 0) {
+            disableX509 = true;
+            continue;
+        }
+
+        if(strcmp(argv[pos], "--disableUsernamePassword") == 0) {
+            disableUsernamePassword = true;
             continue;
         }
 
@@ -1302,8 +1395,8 @@ int main(int argc, char **argv) {
     /* Load PKI */
 #ifdef UA_ENABLE_ENCRYPTION
     res = UA_ServerConfig_setDefaultWithSecureSecurityPolicies(config, 4841,
-                                                         &certificate, &privateKey,
-                                                         NULL, 0, NULL, 0, NULL, 0);
+                                                               &certificate, &privateKey,
+                                                               NULL, 0, NULL, 0, NULL, 0);
     if(res != UA_STATUSCODE_GOOD)
         goto cleanup;
 #ifndef __linux__
@@ -1339,9 +1432,9 @@ int main(int argc, char **argv) {
     if(enableNone)
         enableNoneSecurityPolicy(config);
     if(enableBasic128)
-        enableBasic128SecurityPolicy(config, &certificate, &privateKey);
+        enableBasic128SecurityPolicy(config);
     if(enableBasic256)
-        enableBasic256SecurityPolicy(config, &certificate, &privateKey);
+        enableBasic256SecurityPolicy(config);
     if(disableBasic256Sha256)
         disableBasic256Sha256SecurityPolicy(config);
     if(disableAes128Sha256RsaOaep)
@@ -1356,8 +1449,9 @@ int main(int argc, char **argv) {
 #endif /* UA_ENABLE_ENCRYPTION */
 
     /* Limit the number of SecureChannels and Sessions */
-    config->maxSecureChannels = 40;
-    config->maxSessions = 10;
+    config->maxSecureChannels = 60;
+    config->maxSessions = 50;
+    config->maxSessionTimeout = 10 * 60 * 10000; /* 10 minutes */
 
     /* Revolve the SecureChannel token every 300 seconds */
     config->maxSecurityTokenLifetime = 300000;
@@ -1374,7 +1468,7 @@ int main(int argc, char **argv) {
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS
     /* Set Subscription limits */
-    config->maxSubscriptions = 100;
+    config->maxSubscriptions = 200;
 
     /* Make the minimum lifetimecount larger.
      * Otherwise we get unwanted timing effects in the CTT. */
@@ -1387,34 +1481,42 @@ int main(int argc, char **argv) {
         config->verifyRequestTimestamp = UA_RULEHANDLING_DEFAULT;
 
     /* Instatiate a new AccessControl plugin that knows username/pw */
-    UA_String aes128Sha256RsaOaep = UA_STRING("http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_RsaOaep");
-    UA_AccessControl_default(config, enableAnonymous, &aes128Sha256RsaOaep,
+    UA_AccessControl_default(config, enableAnonymous, NULL,
                              usernamePasswordsSize, usernamePasswords);
 
     /* Override with a custom access control policy */
     config->accessControl.getUserAccessLevel = getUserAccessLevel_disallowSpecific;
     UA_String_clear(&config->applicationDescription.applicationUri);
     config->applicationDescription.applicationUri =
-        UA_String_fromChars("urn:open62541.server.application");
+            UA_String_fromChars("urn:open62541.server.application");
 
+    /* Lifecycle config */
     config->shutdownDelay = 5000.0; /* 5s */
+    config->notifyLifecycleState = notifyState;
 
     setInformationModel(server);
 
+#ifdef UA_ENABLE_ENCRYPTION
+    if(disableX509)
+        disableX509Auth(config);
+    if(disableUsernamePassword)
+        disableUsernamePasswordAuth(config);
+#endif
+
 #ifdef UA_ENABLE_DISCOVERY
-
-    configureLdsRegistration(server);
-
+    /* Add a repeated callback so that the server periodically registers with the Discovery Server. */
+    UA_UInt64 discoveryRegisterCallbackId;
+    UA_Server_addRepeatedCallback(server, (UA_ServerCallback)discoveryRegisterCallback, NULL, 600000, &discoveryRegisterCallbackId);
 #endif
 
     /* run server */
     res = UA_Server_runUntilInterrupt(server);
 
- cleanup:
-    UA_Server_removeCallback(server, ldsCallbackId);
-    UA_Server_unregister_discovery(server, ldsClientRegister);
-    UA_Client_disconnect(ldsClientRegister);
-    UA_Client_delete(ldsClientRegister);
+#ifdef UA_ENABLE_DISCOVERY
+    UA_Server_removeCallback(server, discoveryRegisterCallbackId);
+#endif
+
+    cleanup:
     UA_Server_delete(server);
 
     UA_ByteString_clear(&certificate);
